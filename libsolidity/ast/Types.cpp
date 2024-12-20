@@ -138,9 +138,9 @@ void Type::clearCache() const
 	m_stackSize.reset();
 }
 
-void StorageOffsets::computeOffsets(TypePointers const& _types)
+void StorageOffsets::computeOffsets(TypePointers const& _types, u256 _slotStart)
 {
-	bigint slotOffset = 0;
+	bigint slotOffset = bigint(_slotStart);
 	unsigned byteOffset = 0;
 	std::map<size_t, std::pair<u256, unsigned>> offsets;
 	for (size_t i = 0; i < _types.size(); ++i)
@@ -2168,11 +2168,13 @@ std::vector<std::tuple<VariableDeclaration const*, u256, unsigned>> ContractType
 		for (VariableDeclaration const* variable: contract->stateVariables())
 			if (!(variable->isConstant() || variable->immutable()) && variable->referenceLocation() == location)
 				variables.push_back(variable);
+
 	TypePointers types;
 	for (auto variable: variables)
 		types.push_back(variable->annotation().type);
 	StorageOffsets offsets;
-	offsets.computeOffsets(types);
+	u256 startSlot = m_contract.storageLayoutSpecifier() ? m_contract.storageLayoutSpecifier()->annotation().value : 0;
+	offsets.computeOffsets(types, startSlot);
 
 	std::vector<std::tuple<VariableDeclaration const*, u256, unsigned>> variablesAndOffsets;
 	for (size_t index = 0; index < variables.size(); ++index)
