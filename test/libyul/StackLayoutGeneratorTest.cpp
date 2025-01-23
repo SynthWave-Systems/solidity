@@ -55,17 +55,24 @@ StackLayoutGeneratorTest::StackLayoutGeneratorTest(std::string const& _filename)
 
 namespace
 {
-static std::string variableSlotToString(VariableSlot const& _slot)
+class VariableSlotToStringTransform
 {
-	return _slot.variable.get().name.str();
-}
+public:
+	explicit VariableSlotToStringTransform(YulNameLabelRegistry const& _labels): m_labels(_labels) {}
+	std::string_view operator()(VariableSlot const& _slot) const
+	{
+		return m_labels(_slot.variable.get().name);
+	}
+private:
+	YulNameLabelRegistry const& m_labels;
+};
 }
 
 class StackLayoutPrinter
 {
 public:
-	StackLayoutPrinter(std::ostream& _stream, StackLayout const& _stackLayout, Dialect const& _dialect):
-	m_stream(_stream), m_stackLayout(_stackLayout), m_dialect(_dialect)
+	StackLayoutPrinter(std::ostream& _stream, StackLayout const& _stackLayout, Dialect const& _dialect, YulNameLabelRegistry const& _labels):
+		m_stream(_stream), m_stackLayout(_stackLayout), m_dialect(_dialect), m_labels(_labels)
 	{
 	}
 	void operator()(CFG::BasicBlock const& _block, bool _isMainEntry = true)
@@ -87,20 +94,20 @@ public:
 		CFG::FunctionInfo const& _info
 	)
 	{
-		m_stream << "FunctionEntry_" << _info.function.name.str() << " [label=\"";
-		m_stream << "function " << _info.function.name.str() << "(";
-		m_stream << joinHumanReadable(_info.parameters | ranges::views::transform(variableSlotToString));
+		m_stream << "FunctionEntry_" << m_labels(_info.function.name) << " [label=\"";
+		m_stream << "function " << m_labels(_info.function.name) << "(";
+		m_stream << joinHumanReadable(_info.parameters | ranges::views::transform(VariableSlotToStringTransform{m_labels}));
 		m_stream << ")";
 		if (!_info.returnVariables.empty())
 		{
 			m_stream << " -> ";
-			m_stream << joinHumanReadable(_info.returnVariables | ranges::views::transform(variableSlotToString));
+			m_stream << joinHumanReadable(_info.returnVariables | ranges::views::transform(VariableSlotToStringTransform{m_labels}));
 		}
 		m_stream << "\\l\\\n";
 		Stack functionEntryStack = {FunctionReturnLabelSlot{_info.function}};
 		functionEntryStack += _info.parameters | ranges::views::reverse;
-		m_stream << stackToString(functionEntryStack, m_dialect) << "\"];\n";
-		m_stream << "FunctionEntry_" << _info.function.name.str() << " -> Block" << getBlockId(*_info.entry) << ";\n";
+		m_stream << stackToString(functionEntryStack, m_labels, m_dialect) << "\"];\n";
+		m_stream << "FunctionEntry_" << m_labels(_info.function.name) << " -> Block" << getBlockId(*_info.entry) << ";\n";
 		(*this)(*_info.entry, false);
 	}
 
@@ -130,14 +137,14 @@ private:
 			}, entry->exit);
 
 		auto const& blockInfo = m_stackLayout.blockInfos.at(&_block);
-		m_stream << stackToString(blockInfo.entryLayout, m_dialect) << "\\l\\\n";
+		m_stream << stackToString(blockInfo.entryLayout, m_labels, m_dialect) << "\\l\\\n";
 		for (auto const& operation: _block.operations)
 		{
 			auto entryLayout = m_stackLayout.operationEntryLayout.at(&operation);
-			m_stream << stackToString(m_stackLayout.operationEntryLayout.at(&operation), m_dialect) << "\\l\\\n";
+			m_stream << stackToString(m_stackLayout.operationEntryLayout.at(&operation), m_labels, m_dialect) << "\\l\\\n";
 			std::visit(util::GenericVisitor{
 				[&](CFG::FunctionCall const& _call) {
-					m_stream << _call.function.get().name.str();
+					m_stream << m_labels(_call.function.get().name);
 				},
 				[&](CFG::BuiltinCall const& _call) {
 					m_stream << _call.builtin.get().name;
@@ -145,7 +152,7 @@ private:
 				},
 				[&](CFG::Assignment const& _assignment) {
 					m_stream << "Assignment(";
-					m_stream << joinHumanReadable(_assignment.variables | ranges::views::transform(variableSlotToString));
+					m_stream << joinHumanReadable(_assignment.variables | ranges::views::transform(VariableSlotToStringTransform{m_labels}));
 					m_stream << ")";
 				}
 			}, operation.operation);
@@ -154,9 +161,9 @@ private:
 			for (size_t i = 0; i < operation.input.size(); ++i)
 				entryLayout.pop_back();
 			entryLayout += operation.output;
-			m_stream << stackToString(entryLayout, m_dialect) << "\\l\\\n";
+			m_stream << stackToString(entryLayout, m_labels, m_dialect) << "\\l\\\n";
 		}
-		m_stream << stackToString(blockInfo.exitLayout, m_dialect) << "\\l\\\n";
+		m_stream << stackToString(blockInfo.exitLayout, m_labels, m_dialect) << "\\l\\\n";
 		m_stream << "\"];\n";
 		std::visit(util::GenericVisitor{
 			[&](CFG::BasicBlock::MainExit const&)
@@ -177,7 +184,7 @@ private:
 			{
 				m_stream << "Block" << getBlockId(_block) << " -> Block" << getBlockId(_block) << "Exit;\n";
 				m_stream << "Block" << getBlockId(_block) << "Exit [label=\"{ ";
-				m_stream << stackSlotToString(_conditionalJump.condition, m_dialect);
+				m_stream << stackSlotToString(_conditionalJump.condition, m_labels, m_dialect);
 				m_stream << "| { <0> Zero | <1> NonZero }}\" shape=Mrecord];\n";
 				m_stream << "Block" << getBlockId(_block);
 				m_stream << "Exit:0 -> Block" << getBlockId(*_conditionalJump.zero) << ";\n";
@@ -186,7 +193,7 @@ private:
 			},
 			[&](CFG::BasicBlock::FunctionReturn const& _return)
 			{
-				m_stream << "Block" << getBlockId(_block) << "Exit [label=\"FunctionReturn[" << _return.info->function.name.str() << "]\"];\n";
+				m_stream << "Block" << getBlockId(_block) << "Exit [label=\"FunctionReturn[" << m_labels(_return.info->function.name) << "]\"];\n";
 				m_stream << "Block" << getBlockId(_block) << " -> Block" << getBlockId(_block) << "Exit;\n";
 			},
 			[&](CFG::BasicBlock::Terminated const&)
@@ -208,6 +215,7 @@ private:
 	std::ostream& m_stream;
 	StackLayout const& m_stackLayout;
 	Dialect const& m_dialect;
+	YulNameLabelRegistry const& m_labels;
 	std::map<CFG::BasicBlock const*, size_t> m_blockIds;
 	size_t m_blockCount = 0;
 	std::list<CFG::BasicBlock const*> m_blocksToPrint;
@@ -226,8 +234,10 @@ TestCase::TestResult StackLayoutGeneratorTest::run(std::ostream& _stream, std::s
 
 	std::ostringstream output;
 
+	YulNameDispenser nameDispenser(yulStack.parserResult()->code()->labels());
 	std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(
 		*yulStack.parserResult()->analysisInfo,
+		nameDispenser,
 		yulStack.dialect(),
 		yulStack.parserResult()->code()->root()
 	);
@@ -239,7 +249,8 @@ TestCase::TestResult StackLayoutGeneratorTest::run(std::ostream& _stream, std::s
 	StackLayout stackLayout = StackLayoutGenerator::run(*cfg, simulateFunctionsWithJumps);
 
 	output << "digraph CFG {\nnodesep=0.7;\nnode[shape=box];\n\n";
-	StackLayoutPrinter printer{output, stackLayout, yulStack.dialect()};
+	auto const labels = nameDispenser.generateNewLabels(yulStack.parserResult()->code()->root(), yulStack.dialect());
+	StackLayoutPrinter printer{output, stackLayout, yulStack.dialect(), labels};
 	printer(*cfg->entry);
 	for (auto function: cfg->functions)
 		printer(cfg->functionInfo.at(function));

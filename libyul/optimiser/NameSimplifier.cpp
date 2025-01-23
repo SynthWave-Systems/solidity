@@ -20,7 +20,6 @@
 #include <libyul/AST.h>
 #include <libyul/Dialect.h>
 #include <libyul/YulName.h>
-#include <libyul/optimiser/NameDispenser.h>
 #include <libyul/optimiser/OptimizerUtilities.h>
 
 #include <libsolutil/CommonData.h>
@@ -29,8 +28,7 @@
 
 using namespace solidity::yul;
 
-NameSimplifier::NameSimplifier(OptimiserStepContext& _context, Block const& _ast):
-	m_context(_context)
+NameSimplifier::NameSimplifier(OptimiserStepContext& _context, Block const& _ast)
 {
 	for (YulName name: _context.reservedIdentifiers)
 		m_translations[name] = name;
@@ -75,9 +73,10 @@ void NameSimplifier::operator()(FunctionCall& _funCall)
 	ASTModifier::operator()(_funCall);
 }
 
-void NameSimplifier::findSimplification(YulName const& _name)
+void NameSimplifier::findSimplification(YulName const& /*_name*/)
 {
-	if (m_translations.count(_name))
+	// todo
+	/*if (m_translations.count(_name))
 		return;
 
 	std::string name = _name.str();
@@ -114,7 +113,7 @@ void NameSimplifier::findSimplification(YulName const& _name)
 		YulName newName{name};
 		m_context.dispenser.markUsed(newName);
 		m_translations[_name] = std::move(newName);
-	}
+	}*/
 }
 
 void NameSimplifier::translate(YulName& _name)

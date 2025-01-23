@@ -51,7 +51,7 @@ void FullInliner::run(OptimiserStepContext& _context, Block& _ast)
 	inliner.run(Pass::InlineRest);
 }
 
-FullInliner::FullInliner(Block& _ast, NameDispenser& _dispenser, Dialect const& _dialect):
+FullInliner::FullInliner(Block& _ast, YulNameDispenser& _dispenser, Dialect const& _dialect):
 	m_ast(_ast),
 	m_recursiveFunctions(CallGraphGenerator::callGraph(_ast).recursiveFunctions()),
 	m_nameDispenser(_dispenser),
@@ -83,10 +83,13 @@ FullInliner::FullInliner(Block& _ast, NameDispenser& _dispenser, Dialect const& 
 	}
 
 	// Check for memory guard.
-	std::vector<FunctionCall*> memoryGuardCalls = findFunctionCalls(_ast, "memoryguard", m_dialect);
-	// We will perform less aggressive inlining, if no ``memoryguard`` call is found.
-	if (!memoryGuardCalls.empty())
-		m_hasMemoryGuard = true;
+	if (auto const memoryGuard = m_dialect.findBuiltin("memoryguard"))
+	{
+		std::vector<FunctionCall*> memoryGuardCalls = findFunctionCalls(_ast, BuiltinName{nullptr, *memoryGuard}, m_dialect);
+		// We will perform less aggressive inlining, if no ``memoryguard`` call is found.
+		if (!memoryGuardCalls.empty())
+			m_hasMemoryGuard = true;
+	}
 }
 
 void FullInliner::run(Pass _pass)
@@ -126,7 +129,7 @@ void FullInliner::run(Pass _pass)
 std::map<FunctionHandle, size_t> FullInliner::callDepths() const
 {
 	CallGraph cg = CallGraphGenerator::callGraph(m_ast);
-	cg.functionCalls.erase(""_yulname);
+	cg.functionCalls.erase(YulNameLabelRegistry::emptyName());
 
 	// Remove calls to builtin functions.
 	for (auto& call: cg.functionCalls)

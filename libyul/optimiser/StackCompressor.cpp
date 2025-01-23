@@ -78,7 +78,7 @@ public:
 	using DataFlowAnalyzer::operator();
 	void operator()(FunctionDefinition& _function) override
 	{
-		yulAssert(m_currentFunctionName.empty());
+		yulAssert(YulNameLabelRegistry::empty(m_currentFunctionName));
 		m_currentFunctionName = _function.name;
 		DataFlowAnalyzer::operator()(_function);
 		m_currentFunctionName = {};
@@ -131,7 +131,7 @@ public:
 		m_expressionCodeCost.erase(_variable);
 	}
 
-	YulName m_currentFunctionName = {};
+	YulName m_currentFunctionName = YulNameLabelRegistry::emptyName();
 
 	/// All candidate variables by function name, in order of occurrence.
 	std::vector<std::pair<YulName, YulName>> m_candidates;
@@ -264,9 +264,11 @@ std::tuple<bool, Block> StackCompressor::run(
 		yul::AsmAnalysisInfo analysisInfo = yul::AsmAnalyzer::analyzeStrictAssertCorrect(
 			*_object.dialect(),
 			astRoot,
+			_object.code()->labels(),
 			_object.summarizeStructure()
 		);
-		std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(analysisInfo, *_object.dialect(), astRoot);
+		YulNameDispenser nameDispenser{_object.code()->labels()};
+		std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(analysisInfo, nameDispenser, *_object.dialect(), astRoot);
 		eliminateVariablesOptimizedCodegen(
 			*_object.dialect(),
 			astRoot,
@@ -279,7 +281,7 @@ std::tuple<bool, Block> StackCompressor::run(
 		for (size_t iterations = 0; iterations < _maxIterations; iterations++)
 		{
 			Object object(_object);
-			object.setCode(std::make_shared<AST>(*_object.dialect(), std::get<Block>(ASTCopier{}(astRoot))));
+			object.setCode(std::make_shared<AST>(*_object.dialect(), _object.code()->labels(), std::get<Block>(ASTCopier{}(astRoot))));
 			std::map<YulName, int> stackSurplus = CompilabilityChecker(object, _optimizeStackAllocation).stackDeficit;
 			if (stackSurplus.empty())
 				return std::make_tuple(true, std::move(astRoot));

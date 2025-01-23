@@ -51,6 +51,7 @@ public:
 		AbstractAssembly& _assembly,
 		AsmAnalysisInfo& _analysisInfo,
 		Block const& _block,
+		YulNameLabelRegistry const& _labels,
 		EVMDialect const& _dialect,
 		BuiltinContext& _builtinContext,
 		UseNamedLabels _useNamedLabelsForFunctions
@@ -70,6 +71,7 @@ private:
 		CFG const& _dfg,
 		StackLayout const& _stackLayout,
 		bool _simulateFunctionsWithJumps,
+		YulNameLabelRegistry const& _labels,
 		EVMDialect const& _dialect
 	);
 
@@ -103,6 +105,7 @@ private:
 	BuiltinContext& m_builtinContext;
 	CFG const& m_dfg;
 	StackLayout const& m_stackLayout;
+	YulNameLabelRegistry const& m_labels;
 	EVMDialect const& m_dialect;
 	Stack m_stack;
 	std::map<yul::FunctionCall const*, AbstractAssembly::LabelID> m_returnLabels;

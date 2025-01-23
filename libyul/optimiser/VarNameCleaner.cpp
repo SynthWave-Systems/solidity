@@ -33,10 +33,9 @@ using namespace solidity::yul;
 
 VarNameCleaner::VarNameCleaner(
 	Block const& _ast,
-	Dialect const& _dialect,
+	Dialect const& /*_dialect*/,
 	std::set<YulName> _namesToKeep
 ):
-	m_dialect{_dialect},
 	m_namesToKeep{std::move(_namesToKeep)},
 	m_translatedNames{}
 {
@@ -93,9 +92,9 @@ void VarNameCleaner::operator()(Identifier& _identifier)
 		_identifier.name = name->second;
 }
 
-YulName VarNameCleaner::findCleanName(YulName const& _name) const
+YulName VarNameCleaner::findCleanName(YulName const& /*_name*/) const
 {
-	auto newName = stripSuffix(_name);
+	/*auto newName = stripSuffix(_name);
 	if (!isUsedName(newName))
 		return newName;
 
@@ -105,21 +104,16 @@ YulName VarNameCleaner::findCleanName(YulName const& _name) const
 		YulName newNameSuffixed = YulName{newName.str() + "_" + std::to_string(i)};
 		if (!isUsedName(newNameSuffixed))
 			return newNameSuffixed;
-	}
+	}*/
 	yulAssert(false, "Exhausted by attempting to find an available suffix.");
 }
 
-bool VarNameCleaner::isUsedName(YulName const& _name) const
+bool VarNameCleaner::isUsedName(YulName const& /*_name*/) const
 {
-	return isRestrictedIdentifier(m_dialect, _name) || m_usedNames.count(_name);
+	return false; //isRestrictedIdentifier(m_dialect, _name) || m_usedNames.count(_name);
 }
 
 YulName VarNameCleaner::stripSuffix(YulName const& _name) const
 {
-	static std::regex const suffixRegex("(_+[0-9]+)+$");
-
-	std::smatch suffixMatch;
-	if (regex_search(_name.str(), suffixMatch, suffixRegex))
-		return {YulName{suffixMatch.prefix().str()}};
 	return _name;
 }

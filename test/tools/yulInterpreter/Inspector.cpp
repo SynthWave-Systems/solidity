@@ -31,9 +31,9 @@ using namespace solidity::yul::test;
 namespace
 {
 
-void printVariable(YulString const& _name, u256 const& _value)
+void printVariable(std::string_view const _name, u256 const& _value)
 {
-	std::cout << "\t" << _name.str() << " = " << _value.str();
+	std::cout << "\t" << _name << " = " << _value.str();
 
 	if (_value != 0)
 		std::cout << " (" << toCompactHexWithPrefix(_value) << ")";
@@ -46,17 +46,16 @@ void printVariable(YulString const& _name, u256 const& _value)
 void InspectedInterpreter::run(
 	std::shared_ptr<Inspector> _inspector,
 	InterpreterState& _state,
-	Dialect const& _dialect,
-	Block const& _ast,
+	AST const& _ast,
 	bool _disableExternalCalls,
 	bool _disableMemoryTrace
 )
 {
 	Scope scope;
-	InspectedInterpreter{_inspector, _state, _dialect, scope, _disableExternalCalls, _disableMemoryTrace}(_ast);
+	InspectedInterpreter{_inspector, _state, _ast.dialect(), _ast.labels(), scope, _disableExternalCalls, _disableMemoryTrace}(_ast.root());
 }
 
-Inspector::NodeAction Inspector::queryUser(langutil::DebugData const& _data, std::map<YulString, u256> const& _variables)
+Inspector::NodeAction Inspector::queryUser(langutil::DebugData const& _data, std::map<YulName, u256> const& _variables)
 {
 	if (m_stepMode == NodeAction::RunNode)
 	{
@@ -99,7 +98,7 @@ Inspector::NodeAction Inspector::queryUser(langutil::DebugData const& _data, std
 		else if (input == "variables" || input == "v")
 		{
 			for (auto &&[yulStr, val]: _variables)
-				printVariable(yulStr, val);
+				printVariable(m_labels(yulStr), val);
 			std::cout << std::endl;
 		}
 		else if (
@@ -118,9 +117,9 @@ Inspector::NodeAction Inspector::queryUser(langutil::DebugData const& _data, std
 
 			bool found = false;
 			for (auto &&[yulStr, val]: _variables)
-				if (yulStr.str() == varname)
+				if (m_labels(yulStr) == varname)
 				{
-					printVariable(yulStr, val);
+					printVariable(m_labels(yulStr), val);
 					found = true;
 					break;
 				}
@@ -141,14 +140,14 @@ std::string Inspector::currentSource(langutil::DebugData const& _data) const
 
 u256 InspectedInterpreter::evaluate(Expression const& _expression)
 {
-	InspectedExpressionEvaluator ev(m_inspector, m_state, m_dialect, *m_scope, m_variables, m_disableExternalCalls, m_disableMemoryTrace);
+	InspectedExpressionEvaluator ev(m_inspector, m_state, m_dialect, m_labels, *m_scope, m_variables, m_disableExternalCalls, m_disableMemoryTrace);
 	ev.visit(_expression);
 	return ev.value();
 }
 
 std::vector<u256> InspectedInterpreter::evaluateMulti(Expression const& _expression)
 {
-	InspectedExpressionEvaluator ev(m_inspector, m_state, m_dialect, *m_scope, m_variables, m_disableExternalCalls, m_disableMemoryTrace);
+	InspectedExpressionEvaluator ev(m_inspector, m_state, m_dialect, m_labels, *m_scope, m_variables, m_disableExternalCalls, m_disableMemoryTrace);
 	ev.visit(_expression);
 	return ev.values();
 }

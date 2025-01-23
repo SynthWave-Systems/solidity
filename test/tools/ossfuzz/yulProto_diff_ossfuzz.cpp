@@ -90,7 +90,7 @@ DEFINE_PROTO_FUZZER(Program const& _input)
 	// TODO: Add EOF support
 	yulFuzzerUtil::TerminationReason termReason = yulFuzzerUtil::interpret(
 		os1,
-		stack.parserResult()->code()->root(),
+		*stack.parserResult()->code(),
 		EVMDialect::strictAssemblyForEVMObjects(version, std::nullopt),
 		/*disableMemoryTracing=*/true
 	);
@@ -106,7 +106,7 @@ DEFINE_PROTO_FUZZER(Program const& _input)
 	// TODO: Add EOF support
 	termReason = yulFuzzerUtil::interpret(
 		os2,
-		*astRoot,
+		*optimizerTest.optimizedObject()->code(),
 		EVMDialect::strictAssemblyForEVMObjects(version, std::nullopt),
 		true
 	);

@@ -76,11 +76,18 @@ TestCase::TestResult MemoryGuardTest::run(std::ostream& _stream, std::string con
 		}
 
 		auto handleObject = [&](std::string const& _kind, Object const& _object) {
-			m_obtainedResult += contractName + "(" + _kind + ") " + (findFunctionCalls(
-				_object.code()->root(),
-				"memoryguard",
-				yulStack.dialect()
-			).empty() ? "false" : "true") + "\n";
+			auto const memoryGuardHandle = yulStack.dialect().findBuiltin("memoryguard");
+			m_obtainedResult += contractName + "(" + _kind + ") ";
+			if (memoryGuardHandle &&
+				!findFunctionCalls(
+					_object.code()->root(),
+					BuiltinName{nullptr, *memoryGuardHandle},
+					yulStack.dialect()
+				).empty()
+			)
+				m_obtainedResult += "true\n";
+			else
+				m_obtainedResult += "false\n";
 		};
 		handleObject("creation", *yulStack.parserResult());
 		size_t deployedIndex = yulStack.parserResult()->subIndexByName.at(

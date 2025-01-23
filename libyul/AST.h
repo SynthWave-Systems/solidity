@@ -109,12 +109,27 @@ struct Leave { langutil::DebugData::ConstPtr debugData; };
 class AST
 {
 public:
-	AST(Dialect const& _dialect, Block _root): m_dialect(_dialect), m_root(std::move(_root)) {}
+	AST(Dialect const& _dialect, YulNameLabelRegistry _labels, Block _root):
+		m_dialect(_dialect),
+		m_labels(std::move(_labels)),
+		m_root(std::move(_root))
+	{
+		assertLabelCompatibility();
+	}
+	AST(Dialect const& _dialect, YulNameDispenser const& _idGenerator, Block _root):
+		m_dialect(_dialect),
+		m_labels(_idGenerator.generateNewLabels(_root, _dialect)),
+		m_root(std::move(_root))
+	{}
 
 	Dialect const& dialect() const { return m_dialect; }
 	Block const& root() const { return m_root; }
+	YulNameLabelRegistry const& labels() const { return m_labels; }
 private:
+	void assertLabelCompatibility() const;
+
 	Dialect const& m_dialect;
+	YulNameLabelRegistry m_labels;
 	Block m_root;
 };
 

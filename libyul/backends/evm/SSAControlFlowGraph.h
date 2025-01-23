@@ -221,6 +221,7 @@ public:
 	}
 
 	std::string toDot(
+		YulNameLabelRegistry const& _labels,
 		bool _includeDiGraphDefinition=true,
 		std::optional<size_t> _functionIndex=std::nullopt,
 		SSACFGLiveness const* _liveness=nullptr

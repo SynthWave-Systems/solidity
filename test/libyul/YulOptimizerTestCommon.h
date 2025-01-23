@@ -19,7 +19,6 @@
 #pragma once
 
 #include <libyul/optimiser/OptimiserStep.h>
-#include <libyul/optimiser/NameDispenser.h>
 
 #include <libyul/YulName.h>
 
@@ -57,12 +56,13 @@ public:
 	std::shared_ptr<Object> optimizedObject() const;
 private:
 	Block disambiguate();
-	void updateContext(Block const& _block);
+	void updateContext();
 
 	std::string m_optimizerStep;
 
 	std::set<YulName> m_reservedIdentifiers;
-	std::unique_ptr<NameDispenser> m_nameDispenser;
+	std::unique_ptr<YulNameLabelRegistry> m_labels;
+	std::unique_ptr<YulNameDispenser> m_nameDispenser;
 	std::unique_ptr<OptimiserStepContext> m_context;
 
 	std::shared_ptr<Object const> m_object;

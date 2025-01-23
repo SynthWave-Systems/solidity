@@ -26,6 +26,7 @@
 #include <libsolutil/JSON.h>
 #include <liblangutil/SourceLocation.h>
 #include <libyul/ASTForward.h>
+#include <libyul/YulName.h>
 
 #include <utility>
 
@@ -78,6 +79,7 @@ private:
 
 	Dialect const& m_dialect;
 	std::vector<std::shared_ptr<std::string const>> const& m_sourceNames;
+	YulNameLabelRegistryBuilder m_nodeLabelRegistryBuilder;
 };
 
 }

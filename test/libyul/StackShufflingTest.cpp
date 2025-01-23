@@ -60,13 +60,12 @@ bool StackShufflingTest::parse(std::string const& _source)
 				{
 					scanner.next();
 					std::string functionName = scanner.currentLiteral();
+					auto const functionASTId = m_labelRegistryBuilder.define(functionName);
 					auto call = yul::FunctionCall{
-						{}, yul::Identifier{{}, YulName(functionName)}, {}
+						{}, yul::Identifier{{}, functionASTId}, {}
 					};
 					stack.emplace_back(FunctionCallReturnLabelSlot{
-						m_functions.insert(
-							make_pair(functionName, call)
-						).first->second
+						m_functions.emplace(functionASTId, call).first->second
 					});
 					expectToken(Token::RBrack);
 				}
@@ -82,14 +81,15 @@ bool StackShufflingTest::parse(std::string const& _source)
 				expectToken(Token::LBrack);
 				scanner.next();
 				std::string functionName = scanner.currentLiteral();
+				auto const functionASTId = m_labelRegistryBuilder.define(functionName);
 				auto call = yul::FunctionCall{
-					{}, yul::Identifier{{}, YulName(functionName)}, {}
+					{}, yul::Identifier{{}, functionASTId}, {}
 				};
 				expectToken(Token::Comma);
 				scanner.next();
 				size_t index = size_t(atoi(scanner.currentLiteral().c_str()));
 				stack.emplace_back(TemporarySlot{
-					m_functions.insert(make_pair(functionName, call)).first->second,
+					m_functions.emplace(functionASTId, call).first->second,
 					index
 				});
 				expectToken(Token::RBrack);
@@ -107,7 +107,8 @@ bool StackShufflingTest::parse(std::string const& _source)
 				expectToken(Token::LBrack);
 				scanner.next(); // read number of ghost variables as ghostVariableId
 				std::string ghostVariableId = scanner.currentLiteral();
-				Scope::Variable ghostVar = Scope::Variable{YulName(literal + "[" + ghostVariableId + "]")};
+				auto const astId = m_labelRegistryBuilder.define(fmt::format("{}[{}]", literal, ghostVariableId));
+				Scope::Variable ghostVar = Scope::Variable{astId};
 				stack.emplace_back(VariableSlot{
 					m_variables.insert(std::make_pair(ghostVar.name, ghostVar)).first->second
 				});
@@ -115,11 +116,10 @@ bool StackShufflingTest::parse(std::string const& _source)
 			}
 			else
 			{
-				Scope::Variable var = Scope::Variable{YulName(literal)};
+				auto const astId = m_labelRegistryBuilder.define(literal);
+				Scope::Variable var = Scope::Variable{astId};
 				stack.emplace_back(VariableSlot{
-					m_variables.insert(
-						make_pair(literal, var)
-					).first->second
+					m_variables.emplace(astId, var).first->second
 				});
 			}
 			scanner.next();
@@ -149,20 +149,21 @@ TestCase::TestResult StackShufflingTest::run(std::ostream& _stream, std::string 
 		return TestResult::FatalError;
 	}
 
+	auto const labels = m_labelRegistryBuilder.build();
 	std::ostringstream output;
 	createStackLayout(
 		m_sourceStack,
 		m_targetStack,
 		[&](unsigned _swapDepth) // swap
 		{
-			output << stackToString(m_sourceStack, dialect) << std::endl;
+			output << stackToString(m_sourceStack, labels, dialect) << std::endl;
 			output << "SWAP" << _swapDepth << std::endl;
 		},
 		[&](StackSlot const& _slot) // dupOrPush
 		{
-			output << stackToString(m_sourceStack, dialect) << std::endl;
+			output << stackToString(m_sourceStack, labels, dialect) << std::endl;
 			if (canBeFreelyGenerated(_slot))
-				output << "PUSH " << stackSlotToString(_slot, dialect) << std::endl;
+				output << "PUSH " << stackSlotToString(_slot, labels, dialect) << std::endl;
 			else
 			{
 				if (auto depth = util::findOffset(m_sourceStack | ranges::views::reverse, _slot))
@@ -172,12 +173,12 @@ TestCase::TestResult StackShufflingTest::run(std::ostream& _stream, std::string 
 			}
 		},
 		[&](){ // pop
-			output << stackToString(m_sourceStack, dialect) << std::endl;
+			output << stackToString(m_sourceStack, labels, dialect) << std::endl;
 			output << "POP" << std::endl;
 		}
     );
 
-	output << stackToString(m_sourceStack, dialect) << std::endl;
+	output << stackToString(m_sourceStack, labels, dialect) << std::endl;
 	m_obtainedResult = output.str();
 
 	return checkResult(_stream, _linePrefix, _formatted);

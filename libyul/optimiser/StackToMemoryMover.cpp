@@ -16,7 +16,6 @@
 */
 #include <libyul/optimiser/StackToMemoryMover.h>
 #include <libyul/optimiser/NameCollector.h>
-#include <libyul/optimiser/NameDispenser.h>
 #include <libyul/backends/evm/EVMDialect.h>
 
 #include <libyul/AST.h>

@@ -42,6 +42,7 @@ add_library(yul
 	Utilities.h
 	YulControlFlowGraphExporter.h
 	YulControlFlowGraphExporter.cpp
+	YulName.cpp
 	YulName.h
 	YulString.h
 	backends/evm/AbstractAssembly.h
@@ -151,9 +152,7 @@ add_library(yul
 	optimiser/Metrics.h
 	optimiser/NameCollector.cpp
 	optimiser/NameCollector.h
-	optimiser/NameDispenser.cpp
-	optimiser/NameDispenser.h
-	optimiser/NameDisplacer.cpp
+        optimiser/NameDisplacer.cpp
 	optimiser/NameDisplacer.h
 	optimiser/NameSimplifier.cpp
 	optimiser/NameSimplifier.h

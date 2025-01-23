@@ -23,10 +23,10 @@
 
 #pragma once
 
-#include <libyul/ASTForward.h>
+#include <boost/variant/static_visitor.hpp>
 #include <liblangutil/SourceLocation.h>
 #include <libsolutil/JSON.h>
-#include <boost/variant/static_visitor.hpp>
+#include <libyul/ASTForward.h>
 #include <optional>
 #include <vector>
 
@@ -34,6 +34,7 @@ namespace solidity::yul
 {
 
 class Dialect;
+class YulNameLabelRegistry;
 
 /**
  * Converter of the yul AST into JSON format
@@ -43,8 +44,8 @@ class AsmJsonConverter: public boost::static_visitor<Json>
 public:
 	/// Create a converter to JSON for any block of inline assembly
 	/// @a _sourceIndex to be used to abbreviate source name in the source locations
-	AsmJsonConverter(Dialect const& _dialect, std::optional<size_t> _sourceIndex):
-		m_dialect(_dialect), m_sourceIndex(_sourceIndex) {}
+	AsmJsonConverter(Dialect const& _dialect, YulNameLabelRegistry const& _labels, std::optional<size_t> _sourceIndex):
+		m_dialect(_dialect), m_labels(_labels), m_sourceIndex(_sourceIndex) {}
 
 	Json operator()(Block const& _node) const;
 	Json operator()(NameWithDebugData const& _node) const;
@@ -71,6 +72,7 @@ private:
 	Json vectorOfVariantsToJson(std::vector<T> const& vec) const;
 
 	Dialect const& m_dialect;
+	YulNameLabelRegistry const& m_labels;
 	std::optional<size_t> const m_sourceIndex;
 };
 

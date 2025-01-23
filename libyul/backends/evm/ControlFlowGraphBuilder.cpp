@@ -229,6 +229,7 @@ void markNeedsCleanStack(CFG& _cfg)
 
 std::unique_ptr<CFG> ControlFlowGraphBuilder::build(
 	AsmAnalysisInfo const& _analysisInfo,
+	YulNameDispenser& _nameDispenser,
 	Dialect const& _dialect,
 	Block const& _block
 )
@@ -241,7 +242,7 @@ std::unique_ptr<CFG> ControlFlowGraphBuilder::build(
 	result->entry = &result->makeBlock(debugDataOf(_block));
 
 	ControlFlowSideEffectsCollector sideEffects(_dialect, _block);
-	ControlFlowGraphBuilder builder(*result, _analysisInfo, sideEffects.functionSideEffects(), _dialect);
+	ControlFlowGraphBuilder builder(*result, _analysisInfo, sideEffects.functionSideEffects(), _nameDispenser, _dialect);
 	builder.m_currentBlock = result->entry;
 	builder(_block);
 
@@ -260,11 +261,13 @@ ControlFlowGraphBuilder::ControlFlowGraphBuilder(
 	CFG& _graph,
 	AsmAnalysisInfo const& _analysisInfo,
 	std::map<FunctionDefinition const*, ControlFlowSideEffects> const& _functionSideEffects,
+	YulNameDispenser& _nameDispenser,
 	Dialect const& _dialect
 ):
 	m_graph(_graph),
 	m_info(_analysisInfo),
 	m_functionSideEffects(_functionSideEffects),
+	m_nameDispenser(_nameDispenser),
 	m_dialect(_dialect)
 {
 	if (EVMDialect const* evmDialect = dynamic_cast<EVMDialect const*>(&m_dialect))
@@ -363,8 +366,7 @@ void ControlFlowGraphBuilder::operator()(Switch const& _switch)
 	yulAssert(m_currentBlock, "");
 	langutil::DebugData::ConstPtr preSwitchDebugData = debugDataOf(_switch);
 
-	auto ghostVariableId = m_graph.ghostVariables.size();
-	YulName ghostVariableName("GHOST[" + std::to_string(ghostVariableId) + "]");
+	YulName const ghostVariableName = m_nameDispenser.newGhost();
 	auto& ghostVar = m_graph.ghostVariables.emplace_back(Scope::Variable{ghostVariableName});
 
 	// Artificially generate:
@@ -497,7 +499,7 @@ void ControlFlowGraphBuilder::operator()(FunctionDefinition const& _function)
 
 	CFG::FunctionInfo& functionInfo = m_graph.functionInfo.at(&function);
 
-	ControlFlowGraphBuilder builder{m_graph, m_info, m_functionSideEffects, m_dialect};
+	ControlFlowGraphBuilder builder{m_graph, m_info, m_functionSideEffects, m_nameDispenser, m_dialect};
 	builder.m_currentFunction = &functionInfo;
 	builder.m_currentBlock = functionInfo.entry;
 	builder(_function.body);

@@ -53,29 +53,32 @@ void ExpressionInliner::visit(Expression& _expression)
 	if (std::holds_alternative<FunctionCall>(_expression))
 	{
 		FunctionCall& funCall = std::get<FunctionCall>(_expression);
-		YulString const functionName{resolveFunctionName(funCall.functionName, m_dialect)};
-		if (!m_inlinableFunctions.count(functionName))
-			return;
-		FunctionDefinition const& fun = *m_inlinableFunctions.at(functionName);
-
-		std::map<YulName, Expression const*> substitutions;
-		for (size_t i = 0; i < funCall.arguments.size(); i++)
+		if (std::holds_alternative<Identifier>(funCall.functionName))
 		{
-			Expression const& arg = funCall.arguments[i];
-			YulName paraName = fun.parameters[i].name;
-
-			if (!SideEffectsCollector(m_dialect, arg).movable())
+			auto const it = m_inlinableFunctions.find(std::get<Identifier>(funCall.functionName).name);
+			if (it == m_inlinableFunctions.end())
 				return;
+			FunctionDefinition const& fun = *it->second;
 
-			size_t refs = ReferencesCounter::countReferences(fun.body)[paraName];
-			size_t cost = CodeCost::codeCost(m_dialect, arg);
+			std::map<YulName, Expression const*> substitutions;
+			for (size_t i = 0; i < funCall.arguments.size(); i++)
+			{
+				Expression const& arg = funCall.arguments[i];
+				YulName paraName = fun.parameters[i].name;
 
-			if (refs > 1 && cost > 1)
-				return;
+				if (!SideEffectsCollector(m_dialect, arg).movable())
+					return;
 
-			substitutions[paraName] = &arg;
+				size_t refs = ReferencesCounter::countReferences(fun.body)[paraName];
+				size_t cost = CodeCost::codeCost(m_dialect, arg);
+
+				if (refs > 1 && cost > 1)
+					return;
+
+				substitutions[paraName] = &arg;
+			}
+
+			_expression = Substitution(substitutions).translate(*std::get<Assignment>(fun.body.statements.front()).value);
 		}
-
-		_expression = Substitution(substitutions).translate(*std::get<Assignment>(fun.body.statements.front()).value);
 	}
 }

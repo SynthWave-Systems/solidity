@@ -125,7 +125,8 @@ std::unique_ptr<AST> Parser::parseInline(std::shared_ptr<Scanner> const& _scanne
 		m_scanner = _scanner;
 		if (m_useSourceLocationFrom == UseSourceLocationFrom::Comments)
 			fetchDebugDataFromComment();
-		return std::make_unique<AST>(m_dialect, parseBlock());
+		auto block = parseBlock();
+		return std::make_unique<AST>(m_dialect, m_astNodeLabelRegistryBuilder.build(), std::move(block));
 	}
 	catch (FatalError const& error)
 	{
@@ -563,7 +564,7 @@ std::variant<Literal, Identifier, BuiltinName> Parser::parseLiteralOrIdentifier(
 		if (std::optional<BuiltinHandle> const builtinHandle = m_dialect.findBuiltin(currentLiteral()))
 			literalOrIdentifier = BuiltinName{createDebugData(), *builtinHandle};
 		else
-			literalOrIdentifier = Identifier{createDebugData(), YulName{currentLiteral()}};
+			literalOrIdentifier = Identifier{createDebugData(), m_astNodeLabelRegistryBuilder.define(currentLiteral())};
 		advance();
 		return literalOrIdentifier;
 	}
@@ -753,15 +754,16 @@ NameWithDebugData Parser::parseNameWithDebugData()
 
 YulName Parser::expectAsmIdentifier()
 {
-	YulName name{currentLiteral()};
-	if (currentToken() == Token::Identifier && m_dialect.findBuiltin(name.str()))
+	std::string_view const identifier = currentLiteral();
+	if (currentToken() == Token::Identifier && m_dialect.findBuiltin(identifier))
 		// Non-fatal. We'll continue and wrongly parse it as an identifier. May lead to some spurious
 		// errors after this point, but likely also much more useful ones.
 		m_errorReporter.parserError(
 			5568_error,
 			currentLocation(),
-			"Cannot use builtin function name \"" + name.str() + "\" as identifier name."
+			fmt::format("Cannot use builtin function name \"{}\" as identifier name.", identifier)
 		);
+	auto const name = m_astNodeLabelRegistryBuilder.define(identifier);
 	// NOTE: We keep the expectation here to ensure the correct source location for the error above.
 	expectToken(Token::Identifier);
 	return name;

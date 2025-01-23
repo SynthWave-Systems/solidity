@@ -60,6 +60,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const* _data, size_t _size)
 
 	YulStringRepository::reset();
 
+	// TODO: Add EOF support
 	YulStack stack(
 		langutil::EVMVersion(),
 		std::nullopt,
@@ -87,11 +88,9 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const* _data, size_t _size)
 	// such as unused write to memory e.g.,
 	// { mstore(0, 1) }
 	// that would be removed by the redundant store eliminator.
-	// TODO: Add EOF support
 	yulFuzzerUtil::TerminationReason termReason = yulFuzzerUtil::interpret(
 		os1,
-		stack.parserResult()->code()->root(),
-		EVMDialect::strictAssemblyForEVMObjects(langutil::EVMVersion(), std::nullopt),
+		*stack.parserResult()->code(),
 		/*disableMemoryTracing=*/true
 	);
 	if (yulFuzzerUtil::resourceLimitsExceeded(termReason))
@@ -100,8 +99,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const* _data, size_t _size)
 	stack.optimize();
 	termReason = yulFuzzerUtil::interpret(
 		os2,
-		stack.parserResult()->code()->root(),
-		EVMDialect::strictAssemblyForEVMObjects(langutil::EVMVersion(), std::nullopt),
+		*stack.parserResult()->code(),
 		/*disableMemoryTracing=*/true
 	);
 

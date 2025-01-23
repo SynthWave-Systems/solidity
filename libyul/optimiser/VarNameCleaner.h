@@ -81,7 +81,7 @@ private:
 	/// or was set to be kept.
 	bool isUsedName(YulName const& _name) const;
 
-	Dialect const& m_dialect;
+	/*Dialect const& m_dialect;*/
 
 	/// These names will not be modified.
 	std::set<YulName> m_namesToKeep;

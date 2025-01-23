@@ -17,10 +17,39 @@ along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 // SPDX-License-Identifier: GPL-3.0
 
 #include <libyul/AST.h>
+
+#include <libyul/optimiser/ASTWalker.h>
+
 #include <libyul/Exceptions.h>
 
 namespace solidity::yul
 {
+
+namespace
+{
+class NameVerifier final: public ASTWalker
+{
+public:
+	explicit NameVerifier(YulNameLabelRegistry const& _labels): m_labels(_labels) {}
+
+	using ASTWalker::operator();
+	void operator()(VariableDeclaration const& _varDecl) override
+	{
+		for (auto const& variable: _varDecl.variables)
+			yulAssert(!m_labels(variable.name).empty());
+	}
+	void operator()(FunctionDefinition const& _funDef) override
+	{
+		yulAssert(!m_labels(_funDef.name).empty());
+		for (auto const& param: _funDef.parameters)
+			yulAssert(!m_labels(param.name).empty());
+		for (auto const& ret: _funDef.returnVariables)
+			yulAssert(!m_labels(ret.name).empty());
+	}
+private:
+	YulNameLabelRegistry const& m_labels;
+};
+}
 
 LiteralValue::LiteralValue(std::string _builtinStringLiteralValue):
 	m_numericValue(std::nullopt),
@@ -75,6 +104,12 @@ bool LiteralValue::operator<(solidity::yul::LiteralValue const& _rhs) const
 		return builtinStringLiteralValue() < _rhs.builtinStringLiteralValue();
 
 	return value() < _rhs.value();
+}
+
+void AST::assertLabelCompatibility() const
+{
+	NameVerifier nameVerifier(m_labels);
+	nameVerifier(m_root);
 }
 
 }

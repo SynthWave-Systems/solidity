@@ -65,7 +65,6 @@ private:
 	void findSimplification(YulName const& _name);
 	void translate(YulName& _name);
 
-	OptimiserStepContext& m_context;
 	std::map<YulName, YulName> m_translations;
 };
 

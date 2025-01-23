@@ -19,7 +19,6 @@
 #include <libyul/optimiser/StackLimitEvader.h>
 #include <libyul/optimiser/CallGraphGenerator.h>
 #include <libyul/optimiser/FunctionCallFinder.h>
-#include <libyul/optimiser/NameDispenser.h>
 #include <libyul/optimiser/NameCollector.h>
 #include <libyul/optimiser/StackToMemoryMover.h>
 #include <libyul/backends/evm/ControlFlowGraphBuilder.h>
@@ -91,7 +90,7 @@ struct MemoryOffsetAllocator
 			for (YulName variable: *unreachables)
 				// The empty case is a function with too many arguments or return values,
 				// which was already handled above.
-				if (!variable.empty() && !slotAllocations.count(variable))
+				if (!YulNameLabelRegistry::empty(variable) && !slotAllocations.contains(variable))
 					slotAllocations[variable] = requiredSlots++;
 		}
 
@@ -138,9 +137,10 @@ Block StackLimitEvader::run(
 		yul::AsmAnalysisInfo analysisInfo = yul::AsmAnalyzer::analyzeStrictAssertCorrect(
 			*evmDialect,
 			astRoot,
+			_object.code()->labels(),
 			_object.summarizeStructure()
 		);
-		std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(analysisInfo, *evmDialect, astRoot);
+		std::unique_ptr<CFG> cfg = ControlFlowGraphBuilder::build(analysisInfo, _context.dispenser, *evmDialect, astRoot);
 		run(_context, astRoot, StackLayoutGenerator::reportStackTooDeep(*cfg, !evmDialect->eofVersion().has_value()));
 	}
 	else
@@ -184,7 +184,10 @@ void StackLimitEvader::run(
 		"StackLimitEvader can only be run on objects using the EVMDialect with object access."
 	);
 
-	std::vector<FunctionCall*> memoryGuardCalls = findFunctionCalls(_astRoot, "memoryguard", *evmDialect);
+	auto const memoryGuardHandle = evmDialect->findBuiltin("memoryguard");
+	if (!memoryGuardHandle)
+		return;
+	std::vector<FunctionCall*> memoryGuardCalls = findFunctionCalls(_astRoot, BuiltinName{nullptr, *memoryGuardHandle}, *evmDialect);
 	// Do not optimise, if no ``memoryguard`` call is found.
 	if (memoryGuardCalls.empty())
 		return;
@@ -216,7 +219,8 @@ void StackLimitEvader::run(
 	StackToMemoryMover::run(_context, reservedMemory, memoryOffsetAllocator.slotAllocations, requiredSlots, _astRoot);
 
 	reservedMemory += 32 * requiredSlots;
-	for (FunctionCall* memoryGuardCall: findFunctionCalls(_astRoot, "memoryguard", *evmDialect))
+
+	for (FunctionCall* memoryGuardCall: findFunctionCalls(_astRoot, BuiltinName{nullptr, *memoryGuardHandle}, *evmDialect))
 	{
 		Literal* literal = std::get_if<Literal>(&memoryGuardCall->arguments.front());
 		yulAssert(literal && literal->kind == LiteralKind::Number, "");

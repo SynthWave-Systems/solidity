@@ -21,7 +21,6 @@
 #include <libyul/optimiser/ASTCopier.h>
 #include <libyul/optimiser/CallGraphGenerator.h>
 #include <libyul/optimiser/NameCollector.h>
-#include <libyul/optimiser/NameDispenser.h>
 
 #include <libyul/AST.h>
 #include <libyul/YulName.h>
@@ -66,7 +65,7 @@ void FunctionSpecializer::operator()(FunctionCall& _f)
 
 	if (ranges::any_of(arguments, [](auto& _a) { return _a.has_value(); }))
 	{
-		YulName oldName = std::move(identifier.name);
+		YulName oldName = identifier.name;
 		auto newName = m_nameDispenser.newName(oldName);
 
 		m_oldToNewMap[oldName].emplace_back(std::make_pair(newName, arguments));

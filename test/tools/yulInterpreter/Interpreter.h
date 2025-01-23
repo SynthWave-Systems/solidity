@@ -162,8 +162,7 @@ public:
 	/// activated e.g., Redundant store eliminator, Equal store eliminator.
 	static void run(
 		InterpreterState& _state,
-		Dialect const& _dialect,
-		Block const& _ast,
+		AST const& _ast,
 		bool _disableExternalCalls,
 		bool _disableMemoryTracing
 	);
@@ -171,12 +170,14 @@ public:
 	Interpreter(
 		InterpreterState& _state,
 		Dialect const& _dialect,
+		YulNameLabelRegistry const& _labels,
 		Scope& _scope,
 		bool _disableExternalCalls,
 		bool _disableMemoryTracing,
 		std::map<YulName, u256> _variables = {}
 	):
 		m_dialect(_dialect),
+		m_labels(_labels),
 		m_state(_state),
 		m_variables(std::move(_variables)),
 		m_scope(&_scope),
@@ -216,6 +217,7 @@ protected:
 	void incrementStep();
 
 	Dialect const& m_dialect;
+	YulNameLabelRegistry const& m_labels;
 	InterpreterState& m_state;
 	/// Values of variables.
 	std::map<YulName, u256> m_variables;
@@ -235,6 +237,7 @@ public:
 	ExpressionEvaluator(
 		InterpreterState& _state,
 		Dialect const& _dialect,
+		YulNameLabelRegistry const& _labels,
 		Scope& _scope,
 		std::map<YulName, u256> const& _variables,
 		bool _disableExternalCalls,
@@ -242,6 +245,7 @@ public:
 	):
 		m_state(_state),
 		m_dialect(_dialect),
+		m_labels(_labels),
 		m_variables(_variables),
 		m_scope(_scope),
 		m_disableExternalCalls(_disableExternalCalls),
@@ -264,6 +268,7 @@ protected:
 		return std::make_unique<Interpreter>(
 			m_state,
 			m_dialect,
+			m_labels,
 			m_scope,
 			m_disableExternalCalls,
 			m_disableMemoryTrace,
@@ -275,6 +280,7 @@ protected:
 		return std::make_unique<Interpreter>(
 			_state,
 			m_dialect,
+			m_labels,
 			_scope,
 			m_disableExternalCalls,
 			m_disableMemoryTrace
@@ -297,6 +303,7 @@ protected:
 
 	InterpreterState& m_state;
 	Dialect const& m_dialect;
+	YulNameLabelRegistry const& m_labels;
 	/// Values of variables.
 	std::map<YulName, u256> const& m_variables;
 	Scope& m_scope;

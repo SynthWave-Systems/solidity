@@ -86,6 +86,7 @@ void EVMObjectCompiler::run(Object const& _object, bool _optimize)
 			m_assembly,
 			*_object.analysisInfo,
 			_object.code()->root(),
+			_object.code()->labels(),
 			*evmDialect,
 			context,
 			OptimizedEVMCodeTransform::UseNamedLabels::ForFirstFunctionOfEachName
@@ -93,9 +94,11 @@ void EVMObjectCompiler::run(Object const& _object, bool _optimize)
 		if (!stackErrors.empty())
 		{
 			yulAssert(_object.dialect());
+			auto const memoryGuardHandle = evmDialect->findBuiltin("memoryguard");
+			yulAssert(memoryGuardHandle.has_value());
 			std::vector<FunctionCall const*> memoryGuardCalls = findFunctionCalls(
 				_object.code()->root(),
-				"memoryguard",
+				BuiltinName{nullptr, *memoryGuardHandle},
 				*_object.dialect()
 			);
 			auto stackError = stackErrors.front();
@@ -117,7 +120,7 @@ void EVMObjectCompiler::run(Object const& _object, bool _optimize)
 		CodeTransform transform{
 			m_assembly,
 			*_object.analysisInfo,
-			_object.code()->root(),
+			*_object.code(),
 			*evmDialect,
 			context,
 			_optimize,
