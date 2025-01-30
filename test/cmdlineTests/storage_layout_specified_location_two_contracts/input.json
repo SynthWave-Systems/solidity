@@ -12,7 +12,7 @@
 		"outputSelection": {
 			"fileA": {
 				"A": [ "storageLayout" ],
-				"": [ "storageLayout" ]
+				"": [ ]
 			}
 		}
 	}

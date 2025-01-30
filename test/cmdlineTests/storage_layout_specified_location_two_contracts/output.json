@@ -5,35 +5,35 @@
                 "storageLayout": {
                     "storage": [
                         {
-                            "astId": 2,
+                            "astId": 5,
                             "contract": "fileA:A",
                             "label": "x",
                             "offset": 0,
-                            "slot": "0",
+                            "slot": "42",
                             "type": "t_uint32"
                         },
                         {
-                            "astId": 4,
+                            "astId": 7,
                             "contract": "fileA:A",
                             "label": "y",
                             "offset": 0,
-                            "slot": "1",
+                            "slot": "43",
                             "type": "t_int256"
                         },
                         {
-                            "astId": 6,
+                            "astId": 9,
                             "contract": "fileA:A",
                             "label": "b",
                             "offset": 0,
-                            "slot": "2",
+                            "slot": "44",
                             "type": "t_bool"
                         },
                         {
-                            "astId": 8,
+                            "astId": 11,
                             "contract": "fileA:A",
                             "label": "a",
                             "offset": 1,
-                            "slot": "2",
+                            "slot": "44",
                             "type": "t_address"
                         }
                     ],
@@ -63,56 +63,6 @@
             }
         }
     },
-    "errors": [
-        {
-            "component": "general",
-            "errorCode": "1878",
-            "formattedMessage": "Warning: SPDX license identifier not provided in source file. Before publishing, consider adding a comment containing \"SPDX-License-Identifier: <SPDX-License>\" to each source file. Use \"SPDX-License-Identifier: UNLICENSED\" for non-open-source code. Please see https://spdx.org for more information.
---> fileA
-
-",
-            "message": "SPDX license identifier not provided in source file. Before publishing, consider adding a comment containing \"SPDX-License-Identifier: <SPDX-License>\" to each source file. Use \"SPDX-License-Identifier: UNLICENSED\" for non-open-source code. Please see https://spdx.org for more information.",
-            "severity": "warning",
-            "sourceLocation": {
-                "end": -1,
-                "file": "fileA",
-                "start": -1
-            },
-            "type": "Warning"
-        },
-        {
-            "component": "general",
-            "errorCode": "1878",
-            "formattedMessage": "Warning: SPDX license identifier not provided in source file. Before publishing, consider adding a comment containing \"SPDX-License-Identifier: <SPDX-License>\" to each source file. Use \"SPDX-License-Identifier: UNLICENSED\" for non-open-source code. Please see https://spdx.org for more information.
---> fileB
-
-",
-            "message": "SPDX license identifier not provided in source file. Before publishing, consider adding a comment containing \"SPDX-License-Identifier: <SPDX-License>\" to each source file. Use \"SPDX-License-Identifier: UNLICENSED\" for non-open-source code. Please see https://spdx.org for more information.",
-            "severity": "warning",
-            "sourceLocation": {
-                "end": -1,
-                "file": "fileB",
-                "start": -1
-            },
-            "type": "Warning"
-        },
-        {
-            "component": "general",
-            "errorCode": "3420",
-            "formattedMessage": "Warning: Source file does not specify required compiler version!
---> fileA
-
-",
-            "message": "Source file does not specify required compiler version!",
-            "severity": "warning",
-            "sourceLocation": {
-                "end": -1,
-                "file": "fileA",
-                "start": -1
-            },
-            "type": "Warning"
-        }
-    ],
     "sources": {
         "fileA": {
             "id": 0

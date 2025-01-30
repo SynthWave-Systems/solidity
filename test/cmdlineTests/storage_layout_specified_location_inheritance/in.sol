@@ -7,7 +7,7 @@ contract A {
     int8 z;
 }
 
-contract C layout at 42 {
+contract C layout at 42 is A {
     bool b;
     address addr;
     uint[2] array;
